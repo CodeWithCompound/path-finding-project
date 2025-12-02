@@ -1,57 +1,72 @@
-use std::vec;
-
 use macroquad::prelude::*;
-fn main_ui_elements() {
-    let outer_offset = 10.0;
-        let info_height = screen_height() * 0.15;
-    let info_y = screen_height() - info_height - outer_offset;
-    // from here on out o = observation
-    let o_ui_dim = vec2(
-        screen_width() * 0.95, 
-        screen_height() * 0.6);
-    let o_ui_pos = vec2(
-        (screen_width() - o_ui_dim.x) / 2.0,
-        (info_y - o_ui_dim.y) / 2.0,
+
+fn draw_ui(target_pos: Vec2, has_target: bool) -> bool {
+    const OUTER: f32 = 10.0;
+    let info_h = screen_height() * 0.15;
+    let info_y = screen_height() - info_h - OUTER;
+
+    let obs_size = vec2(screen_width() * 0.95, screen_height() * 0.6);
+    let obs_pos = vec2(
+        (screen_width() - obs_size.x) / 2.0,
+        (info_y - obs_size.y) / 2.0,
     );
 
-    draw_rectangle(o_ui_pos.x, o_ui_pos.y, o_ui_dim.x, o_ui_dim.y, DARKGRAY);
-    draw_rectangle_lines(
-        o_ui_pos.x, o_ui_pos.y, o_ui_dim.x, o_ui_dim.y, 2.0, DARKGRAY,
-    );
+    draw_rectangle(obs_pos.x, obs_pos.y, obs_size.x, obs_size.y, DARKGRAY);
+    draw_rectangle_lines(obs_pos.x, obs_pos.y, obs_size.x, obs_size.y, 4.0, WHITE);
 
-    draw_rectangle(outer_offset, info_y, screen_width() - outer_offset * 2.0, info_height, DARKGRAY);
-    draw_rectangle_lines(outer_offset, info_y, screen_width() - outer_offset * 2.0, info_height, 2.0, WHITE);
-}
-fn new_position(agent_has_target: &mut bool) {
-    let (mouse_x, mouse_y) = mouse_position();
-    println!("New position at x: {}, y: {}", mouse_x, mouse_y);
-    *agent_has_target = true;
-println!("Agent has target: {}", agent_has_target);
-}
-fn delete_position(agent_has_target: &mut bool) {
-    if *agent_has_target {
-        println!("Deleting target position.");
-        *agent_has_target = false;
+    draw_rectangle(OUTER, info_y, screen_width() - OUTER * 2.0, info_h, DARKGRAY);
+    draw_rectangle_lines(OUTER, info_y, screen_width() - OUTER * 2.0, info_h, 4.0, WHITE);
+
+    let (mx, my) = mouse_position();
+    let inside = mx > obs_pos.x
+        && mx < obs_pos.x + obs_size.x
+        && my > obs_pos.y
+        && my < obs_pos.y + obs_size.y;
+
+    let text = if inside {
+        "Mouse INSIDE observation area"
     } else {
-        println!("No target position to delete.");
+        "Mouse OUTSIDE observation area"
+    };
+    let color = if inside { GREEN } else { RED };
+
+    draw_text(text, OUTER + 10.0, info_y + 30.0, 28.0, color);
+
+    if has_target && inside {
+        draw_circle(target_pos.x, target_pos.y, 8.0, GREEN);
+        draw_circle_lines(target_pos.x, target_pos.y, 8.0, 3.0, WHITE);
     }
-    println!("Agent has target: {}", agent_has_target);
+
+    inside
 }
 
-#[macroquad::main("pathfinding")]
+#[macroquad::main("i say move, agent moves and i say stop, agent stops. i happy now")]
 async fn main() {
-    let mut agent_has_target = false;
+    let mut has_target = false;
+    let mut target_pos = vec2(0.0, 0.0);
+
     loop {
         clear_background(BLACK);
-        main_ui_elements();
-        if is_mouse_button_pressed(MouseButton::Left) {
-    new_position(&mut agent_has_target);
-}
+
+        let inside_obs = draw_ui(target_pos, has_target);
+
+        if is_mouse_button_pressed(MouseButton::Left) && inside_obs {
+            target_pos = mouse_position().into();
+            has_target = true;
+            println!("Target set → ({:.1}, {:.1})", target_pos.x, target_pos.y);
+        }
+
         if is_mouse_button_pressed(MouseButton::Right) {
-    delete_position(&mut agent_has_target);
-}
+            if has_target {
+                println!("Target cleared");
+                has_target = false;
+            }
+        }
 
-        next_frame().await;
+        let status = if has_target { "TARGET LOCKED" } else { "NO TARGET" };
+        let col = if has_target { GREEN } else { RED };
+        draw_text(status, 20.0, screen_height() - 40.0, 40.0, col);
 
+        next_frame().await
     }
 }
