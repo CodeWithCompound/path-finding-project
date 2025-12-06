@@ -1,4 +1,4 @@
-# Simple Menu
+# Path Finding Project
 ![screenshot](preview_pathfinding.png)
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
